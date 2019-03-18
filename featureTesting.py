@@ -25,12 +25,43 @@ class MainWindow(QWidget):
         self.SetLayout()
 
 
+
+    def serialManager(self):
+        """
+        This loop is responsible for reading and writing to the serial port.
+        
+        The first block reads in any unsolicited messages from grbl, such as startup messages
+        errors, or alarms.
+
+        The second block checks if any messages are queued up to be sent to grbl.
+        If there is a message in the queue it will be sent to grbl and the manager
+        will wait for and read any response. The manager will continue to read responses
+        until an 'ok' message is recieved
+
+        """
+        while True:
+            while self.ser.in_waiting:
+                incomingMessage = self.ser.readline().rstrip()
+                self.incommingMessageQ.put(incomingMessage)
+            
+            if self.outgoingMessageQ.qsize()>0:
+                outgoingMessage = self.outgoingMessageQ.get()
+                self.ser.write("{}\n".format(outgoingMessage).encode('utf-8'))
+                
+                #Read GRBLs response - Continue to read until 'ok' is given
+                responseMessage = self.ser.readline().rstrip()
+                while responseMessage != 'ok':
+                    self.incommingMessageQ.put(responseMessage)
+                    responseMessage = self.ser.readline().rstrip()
+                
+
+
+
     def messageMonitor(self):
         print('message monitor started')
 
         lastUpdate = time.time()
         while True:
-
             #Check if there are messages in the buffer
             if self.ser.in_waiting:
                 
@@ -74,6 +105,10 @@ class MainWindow(QWidget):
 
                 #Take the message off the FIFO Queue
                 incomingMessage = self.incommingMessageQ.get()
+
+                if self.displayAllMessagesCheckBox.isChecked():
+                    self.serialMonitor.append(incomingMessage)
+                    continue
 
                 #Is it a 'ok' confirmation message?
                 if incomingMessage =='ok':
@@ -156,9 +191,11 @@ class MainWindow(QWidget):
         self.disconnectButton = QPushButton('Disconnect')
 
         #Check boxes
+        self.displayAllMessagesCheckBox = QCheckBox('All messages')
         self.okMessagesCheckBox = QCheckBox('Ok Messages')
         self.statusReportsMPosCheckBox = QCheckBox('MPos Messages')
         self.statusReportsWPosCheckBox = QCheckBox('WPos Messages')
+        
 
         #Create COM port combo box
         self.portList = QComboBox()
@@ -190,6 +227,7 @@ class MainWindow(QWidget):
         sideMenuLayout.addWidget(self.okMessagesCheckBox,2,0)
         sideMenuLayout.addWidget(self.statusReportsMPosCheckBox,3,0)
         sideMenuLayout.addWidget(self.statusReportsWPosCheckBox,4,0)
+        sideMenuLayout.addWidget(self.displayAllMessagesCheckBox,5,0)
 
         gridLayout.addWidget(self.serialMonitor,0,0)
         gridLayout.addLayout(sideMenuLayout,0,1)
