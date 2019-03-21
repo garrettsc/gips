@@ -16,16 +16,21 @@ class MainWindow(QWidget):
         self.setWindowTitle("grbl Serial Monitor")
         self.setGeometry(100, 100, 1000, 600)
 
-        
-  
+         
     def launch(self):
+        """
+        This method sets up widgets, layouts, and any other at-runtime services
+        """
+
+        self.createQueues()
         self.createSerialMonitor()
         self.createSideMenu()
         self.createCommandSenderMenu()
         self.SetLayout()
 
 
-
+##########################################################################################
+#=========================== SERIAL MANAGEMENT AND PARSING ===============================
     def serialManager(self):
         """
         This loop is responsible for reading and writing to the serial port.
@@ -39,125 +44,156 @@ class MainWindow(QWidget):
         until an 'ok' message is recieved
 
         """
-        while True:
-            while self.ser.in_waiting:
-                incomingMessage = self.ser.readline().rstrip()
-                self.incommingMessageQ.put(incomingMessage)
-            
-            if self.outgoingMessageQ.qsize()>0:
-                outgoingMessage = self.outgoingMessageQ.get()
-                self.ser.write("{}\n".format(outgoingMessage).encode('utf-8'))
-                
-                #Read GRBLs response - Continue to read until 'ok' is given
-                responseMessage = self.ser.readline().rstrip()
-                while responseMessage != 'ok':
-                    self.incommingMessageQ.put(responseMessage)
-                    responseMessage = self.ser.readline().rstrip()
-                
-
-
-
-    def messageMonitor(self):
-        print('message monitor started')
-
-        lastUpdate = time.time()
-        while True:
-            #Check if there are messages in the buffer
-            if self.ser.in_waiting:
-                
-                #Read all messages in the buffer
+        while self.ser.is_open:
+            try:
                 while self.ser.in_waiting:
                     incomingMessage = self.ser.readline().rstrip()
                     self.incommingMessageQ.put(incomingMessage)
-
-            #Check if there are any outgoing messages            
-            if self.outgoingMessageQ.qsize()>0:
-                outgoingMessage = self.outgoingMessageQ.get()
-                self.ser.write("{}\n".format(outgoingMessage).encode('utf-8'))
-                self.incommingMessageQ.put(outgoingMessage)
-
-                #Wait until grbl responds
-                while not self.ser.in_waiting:
-                    pass
-                self.incommingMessageQ.put(self.ser.readline().rstrip())
-
-
-            else:
-                if time.time()-lastUpdate > 1:
-                    self.ser.write("?\n".encode('utf-8'))
-                    while not self.ser.in_waiting:
-                        pass
-                    self.incommingMessageQ.put(self.ser.readline().rstrip())
-                    
-
-
-    def mPosMessageParser(self,rawMessage):
-
-        message_split = rawMessage.replace('<','').replace('>','').split('|')
-        print message_split
-
-
-
-    def mainLoop(self):
- 
-        if self.incommingMessageQ.qsize() >0:
-            while self.incommingMessageQ.qsize()>0:
-
-                #Take the message off the FIFO Queue
-                incomingMessage = self.incommingMessageQ.get()
-
-                if self.displayAllMessagesCheckBox.isChecked():
-                    self.serialMonitor.append(incomingMessage)
-                    continue
-
-                #Is it a 'ok' confirmation message?
-                if incomingMessage =='ok':
-                    if self.okMessagesCheckBox.isChecked():
-                        self.serialMonitor.append(incomingMessage)
-                    continue
                 
-                #Is it a MPOS Message?
-                else:
-                    if 'MPos' in incomingMessage and not 'WC' in incomingMessage:
-                        if self.statusReportsMPosCheckBox.isChecked():
-                            self.serialMonitor.append(incomingMessage)
-                            self.mPosMessageParser(incomingMessage)
+                if self.outgoingMessageQ.qsize()>0:
+                    outgoingMessage = self.outgoingMessageQ.get()
+                    self.ser.write("{}\n".format(outgoingMessage).encode('utf-8'))
+                    
+                    #Read GRBLs response - Continue to read until 'ok' is given
+                    responseMessage = self.ser.readline().rstrip()
+                    
+                    if 'ALARM' in responseMessage:
+                        self.incommingMessageQ.put(responseMessage)
                         continue
-                    elif 'WC' in incomingMessage:
-                        if self.statusReportsWPosCheckBox.isChecked():
-                            self.serialMonitor.append(incomingMessage)
-                        continue
-        
 
-    def createSerialMonitor(self):
-        self.serialMonitor = QTextEdit()
-        self.serialMonitor.setReadOnly(True)
+                    while responseMessage != 'ok' and not 'error' in responseMessage:
+                        self.incommingMessageQ.put(responseMessage)
+                        responseMessage = self.ser.readline().rstrip()
+                    self.incommingMessageQ.put(responseMessage)
+            except:
+                pass
+
+    
+    def serialPrinter(self):
+        if self.serialMonitorQ.qsize()>0:
+            serialMessage = self.serialMonitorQ.get()
+            self.serialMonitor.append(serialMessage)
+
+
+
 
     def connectToSerial(self):
         self.serialMonitor.append("Connecting...")
-        self.count = 0
 
-        self.incommingMessageQ = Queue.Queue()
-        self.outgoingMessageQ = Queue.Queue()
-
-        self.ser = serial.Serial(
-                            port=self.portList.currentText(),
-                            baudrate=115200,timeout=1)
+        self.ser = serial.Serial(port=self.portList.currentText(),
+                                 baudrate=115200,
+                                 timeout=1)
 
         self.serialMonitor.append("connected to"+self.portList.currentText())
 
         time.sleep(2)
 
-        t = threading.Thread(target=self.messageMonitor)
+        t = threading.Thread(target=self.serialManager)
         t.daemon = True
         t.start()
+
+        t = threading.Thread(target=self.messageParserService)
+        t.daemon = True
+        t.start()
+
+        t = threading.Thread(target=self.requestStatusService)
+        t.daemon = True
+        t.start()
+
         self.timer = QTimer(self)
         self.timer.setInterval(20) # interval in ms
-        self.connect(self.timer, SIGNAL("timeout()"), self.mainLoop)
+        self.connect(self.timer, SIGNAL("timeout()"), self.serialPrinter)
+
+
+        self.timer2 = QTimer(self)
+        self.timer2.setInterval(200)
+        self.connect(self.timer2,SIGNAL("timeout()"),self.requestStatusService)
+        
+
         self.timer.start()
+
+        
 
         self.disconnectButton.setEnabled(True)
         self.connectButton.setEnabled(False)
+
+    def test1(self):
+        print time.time()
+
+
+###############################################################################################
+###############################################################################################
+
+    def requestStatusService(self):
+        while True:
+            self.outgoingMessageQ.put("?")
+            time.sleep(1)
+
+    
+    def messageParserService(self):
+        """
+        The messageParserService method parses through incoming messages and distributes them
+        to the the appropriate widgets
+
+        """
+
+        while True:
+
+            if self.incommingMessageQ.qsize()>0:
+                
+                #Take a message off the incomming message stack
+                incomingMessage = self.incommingMessageQ.get()
+                
+                if len(incomingMessage) == 0:
+                    continue
+                
+
+                if incomingMessage[0] == '<':   #Status message
+                    messageSplit = incomingMessage.replace('<','').replace('>','').split('|')
+                    
+                    state = messageSplit[0]
+                    mPos = messageSplit[1]
+                    FS = messageSplit[2]
+                if incomingMessage[0] == '$':   #Settings message
+                    pass    
+
+                else:
+                    pass
+
+                
+                self.serialMonitorQ.put(incomingMessage)
+
+
+
+
+#================================================================================================
+#################################################################################################
+
+
+
+
+#================================== grbl commands ================================================
+##################################################################################################
+
+
+
+    def sendHomeCommand(self):
+        self.outgoingMessageQ.put("$H")
+
+    def sendUnlockCommand(self):
+        self.outgoingMessageQ.put("$X")
+
+
+    def createQueues(self):
+
+        self.incommingMessageQ = Queue.Queue()
+        self.outgoingMessageQ = Queue.Queue()
+
+        self.serialMonitorQ = Queue.Queue()
+
+
+
+
 
     def disconnectFromSerial(self):
         self.ser.close()
@@ -172,6 +208,10 @@ class MainWindow(QWidget):
         self.outgoingMessageQ.put(cmd)
         self.sendLineEdit.clear()
 
+
+    def createSerialMonitor(self):
+        self.serialMonitor = QTextEdit()
+        self.serialMonitor.setReadOnly(True)
 
     def createCommandSenderMenu(self):
         self.sendLineEdit = QLineEdit()
@@ -190,6 +230,9 @@ class MainWindow(QWidget):
         self.connectButton = QPushButton('Connect')
         self.disconnectButton = QPushButton('Disconnect')
 
+        self.homeButton = QPushButton('Home')
+        self.unlockButton = QPushButton('Unlock')
+
         #Check boxes
         self.displayAllMessagesCheckBox = QCheckBox('All messages')
         self.okMessagesCheckBox = QCheckBox('Ok Messages')
@@ -207,6 +250,9 @@ class MainWindow(QWidget):
         #Connect Buttons:
         self.connectButton.clicked.connect(self.connectToSerial)
         self.disconnectButton.clicked.connect(self.disconnectFromSerial)
+        self.homeButton.clicked.connect(self.sendHomeCommand)
+        self.unlockButton.clicked.connect(self.sendUnlockCommand)
+
 
         #Set Button States
         self.disconnectButton.setEnabled(False)
@@ -228,16 +274,14 @@ class MainWindow(QWidget):
         sideMenuLayout.addWidget(self.statusReportsMPosCheckBox,3,0)
         sideMenuLayout.addWidget(self.statusReportsWPosCheckBox,4,0)
         sideMenuLayout.addWidget(self.displayAllMessagesCheckBox,5,0)
+        sideMenuLayout.addWidget(self.homeButton,6,0)
+        sideMenuLayout.addWidget(self.unlockButton,6,1)
 
         gridLayout.addWidget(self.serialMonitor,0,0)
         gridLayout.addLayout(sideMenuLayout,0,1)
         gridLayout.addLayout(self.commandSendLayout,1,0)
 
         self.setLayout(gridLayout)
-
-
-
-
 
 
 if __name__ == '__main__':
