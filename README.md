@@ -69,6 +69,13 @@ Push Messages:
 - 
 
 
+### Contributing:
+
+- Test out the program! Find bugs and report them in detail
+- calling Qt, zmq, and grbl folks to examine and suggest improvements
+-
+- 
+
 
 
 
