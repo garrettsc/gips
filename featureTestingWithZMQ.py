@@ -20,7 +20,7 @@ class MainWindow(QWidget):
 
         QWidget.__init__(self)
         self.setWindowTitle("grbl Serial Monitor")
-        self.setGeometry(100, 100, 1000, 600)
+        self.setGeometry(100, 100, 1000, 300)
 
          
     def launch(self):
@@ -30,6 +30,7 @@ class MainWindow(QWidget):
 
         self.createQueues()
         self.createSerialMonitor()
+        self.createJogPanel()
         self.createSideMenu()
         self.createCommandSenderMenu()
         self.SetLayout()
@@ -64,8 +65,17 @@ class MainWindow(QWidget):
                     self.unQuereiedMessages.put(incommingMessage)
                 try:
                     outgoingMessage = socket.recv_string(flags=zmq.NOBLOCK)
-                    print("OGM: {}".format(outgoingMessage))
-                    self.ser.write("{}\n".format(outgoingMessage))
+
+                    if outgoingMessage == '!':
+                        self.ser.write('!')
+                    if outgoingMessage[0:2] == '0x':
+                        
+                        self.ser.write('\x85')
+                        self.ser.write('\n')
+                        
+                    else:
+                        self.ser.write("{}\n".format(outgoingMessage))
+
                     fullResponse = ''
                     responseMessage = self.ser.readline().rstrip()
 
@@ -87,6 +97,8 @@ class MainWindow(QWidget):
                 pass
 
 
+#=========================== SERIAL MANAGEMENT AND PARSING ===============================
+##########################################################################################
     
 
        
@@ -98,7 +110,10 @@ class MainWindow(QWidget):
 
 
     def connectToSerial(self):
-        self.serialMonitor.append("Connecting...")
+        """
+        This method attempts to open a serial connection to the selected com port.
+
+        """
 
         self.ser = serial.Serial(port=self.portList.currentText(),
                                  baudrate=115200,
@@ -114,24 +129,40 @@ class MainWindow(QWidget):
 
         port = 5001
         context = zmq.Context()
-        print "Connecting to server..."
         self.cmdSocket = context.socket(zmq.REQ)
         self.cmdSocket.connect("tcp://localhost:%s" % port)
+
+        self.jogSocket = context.socket(zmq.REQ)
+        self.jogSocket.connect("tcp://localhost:%s" % port)
+
+        self.jogCancelSocket = context.socket(zmq.REQ)
+        self.jogCancelSocket.connect("tcp://localhost:%s" % port)
 
 
         # Timer will call two methods every 0.2 seconds
         # 1) Check if any unquerried messages are in the queue to print
         # 2) Request a status update
         self.timer = QTimer(self)
-        self.timer.setInterval(200)
+        self.timer.setInterval(25)
         self.connect(self.timer,SIGNAL("timeout()"),self.serialPrinter)
         self.connect(self.timer,SIGNAL('timeout()'),self.requestStatusService)
         self.timer.start()
 
         
-
         self.disconnectButton.setEnabled(True)
         self.connectButton.setEnabled(False)
+        self.cmdButtonStates(True)
+
+
+
+
+    def disconnectFromSerial(self):
+        self.ser.close()
+        self.serialMonitor.append("Disconnected from serial port")
+        self.timer.stop()
+        self.connectButton.setEnabled(True)
+        self.disconnectButton.setEnabled(False)
+        self.cmdButtonStates(False)
 
 
 ###############################################################################################
@@ -139,50 +170,26 @@ class MainWindow(QWidget):
 
 
 
+
+
+###############################################################################################
+########################### REQUEST STATUS UPDATE #############################################
     def requestStatusService(self):
+        """
+        When called send a '?' status update query across the cmd socket and wait for a response.
+        Parse out the status and the machine position from the status. Method needs cleaned up significantly
+        """
 
-            self.cmdSocket.send('?')   
-            response = self.cmdSocket.recv()
-            messageSplit = response.replace('<','').replace('>','').split('|')
+        self.cmdSocket.send('?')   
+        response = self.cmdSocket.recv()
+        resp = json.loads(response)
 
+        data = resp[0].encode('utf-8')
+        status =  data.replace('<','').replace('>','').split('|')[0]
+        MPos = data.replace('<','').replace('>','').split('|')[1].split(':')[1].split(',')
 
-            print messageSplit
-    
-    # def messageParserService(self):
-    #     """
-    #     The messageParserService method parses through incoming messages and distributes them
-    #     to the the appropriate widgets
-
-    #     """
-
-    #     while True:
-
-    #         if self.incommingMessageQ.qsize()>0:
-                
-    #             #Take a message off the incomming message stack
-    #             incomingMessage = self.incommingMessageQ.get()
-                
-    #             if len(incomingMessage) == 0:
-    #                 continue
-                
-
-    #             if incomingMessage[0] == '<':   #Status message
-    #                 messageSplit = incomingMessage.replace('<','').replace('>','').split('|')
-                    
-    #                 state = messageSplit[0]
-    #                 mPos = messageSplit[1]
-    #                 FS = messageSplit[2]
-    #             if incomingMessage[0] == '$':   #Settings message
-    #                 pass    
-
-    #             else:
-    #                 pass
-
-                
-    #             self.serialMonitorQ.put(incomingMessage)
-
-
-
+        self.droTextWidget.setText(self.droFormat.format(float(MPos[0]),float(MPos[1]),float(MPos[2])))
+        self.currentStatusWidget.setText(status)
 
 #================================================================================================
 #################################################################################################
@@ -193,25 +200,65 @@ class MainWindow(QWidget):
 #================================== grbl commands ================================================
 ##################################################################################################
 
-
-
     def sendHomeCommand(self):
-        self.outgoingMessageQ.put("$H")
+        self.cmdSocket.send('$H')
+        reply = self.cmdSocket.recv()
 
     def sendUnlockCommand(self):
-        self.outgoingMessageQ.put("$X")
-
+        self.cmdSocket.send('$X')
+        reply = self.cmdSocket.recv()
 
     def createQueues(self):
         self.unQuereiedMessages = Queue.Queue()
 
+#================================== grbl commands ================================================
+##################################################################################################
 
-    def disconnectFromSerial(self):
-        self.ser.close()
-        self.serialMonitor.append("Disconnected from serial port")
-        self.timer.stop()
-        self.connectButton.setEnabled(True)
-        self.disconnectButton.setEnabled(False)
+
+    def createJogPanel(self):
+
+        self.pXJogButton = QPushButton()
+        
+
+        self.pXJogButton.setText('+X')
+        self.pXJogButton.pressed.connect(self.onPress)
+        self.pXJogButton.released.connect(self.onRelease)
+
+        self.jogTimer = QTimer()
+        self.jogTimer.setInterval(25)
+        self.jogTimer.timeout.connect(lambda : self.jogSender(x=0.01,f=1000))
+
+
+
+    
+    def onPress(self):
+        self.jogTimer.start()
+
+    def onRelease(self):
+        
+        self.jogTimer.stop()
+        time.sleep(25/1000.0)
+
+        self.jogCancelSocket.send('!')
+        rep = self.jogCancelSocket.recv()
+       
+        self.jogCancelSocket.send('0x85')
+        reply = self.jogCancelSocket.recv()
+
+
+
+    # def jogX(self):
+    #     jogCmd = '$J=G91X0.5F1500'
+    #     self.jogSocket.send(jogCmd)
+    #     _ = self.jogSocket.recv()
+
+
+    def jogSender(self,x=0,y=0,z=0,f=0):
+        jogCmd = '$J=G91X{}Y{}Z{}F{}'.format(x,y,z,f)
+        self.jogSocket.send(jogCmd)
+        self.jogSocket.recv()
+
+
 
     def sendCommand(self):
         cmd = self.sendLineEdit.text()
@@ -249,13 +296,29 @@ class MainWindow(QWidget):
 
         self.homeButton = QPushButton('Home')
         self.unlockButton = QPushButton('Unlock')
-        
+
 
         #Create COM port combo box
         self.portList = QComboBox()
-        ports = serial.tools.list_ports.comports()
+        ports = serial.tools.list_ports.comports()[::-1]
         for port in ports:
             self.portList.addItem(port.device)
+
+
+        # Create x,y,z readouts
+        self.droTextWidget = QLabel()
+        self.droFormat = "X    {:9.4f}\nY    {:9.4f}\nZ    {:9.4f}"
+        self.droTextWidget.setText(self.droFormat.format(0,0,0))
+        font = QFont()
+        font.setPointSize(15)
+        self.droTextWidget.setFont(font)
+
+
+        # Create status label
+
+        self.currentStatusWidget = QLabel()
+        self.currentStatusWidget.setFont(font)
+        self.currentStatusWidget.setFrameStyle(QFrame.Sunken | QFrame.Panel | QFrame.Box)
 
 
         #Connect Buttons:
@@ -268,8 +331,14 @@ class MainWindow(QWidget):
         #Set Button States
         self.disconnectButton.setEnabled(False)
         self.connectButton.setEnabled(True)
+        self.homeButton.setEnabled(False)
+        self.unlockButton.setEnabled(False)
 
 
+
+    def cmdButtonStates(self,state):
+        self.homeButton.setEnabled(state)
+        self.unlockButton.setEnabled(state)
 
 
     
@@ -283,10 +352,14 @@ class MainWindow(QWidget):
         sideMenuLayout.addWidget(self.portList,1,0)
         sideMenuLayout.addWidget(self.homeButton,6,0)
         sideMenuLayout.addWidget(self.unlockButton,6,1)
+        sideMenuLayout.addWidget(self.droTextWidget,7,0)
+        sideMenuLayout.addWidget(self.currentStatusWidget,8,0)
+        sideMenuLayout.addWidget(self.pXJogButton,9,0)
 
         gridLayout.addWidget(self.serialMonitor,0,0)
         gridLayout.addLayout(sideMenuLayout,0,1)
         gridLayout.addLayout(self.commandSendLayout,1,0)
+        
 
         self.setLayout(gridLayout)
 
