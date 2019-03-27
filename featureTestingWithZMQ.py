@@ -218,43 +218,73 @@ class MainWindow(QWidget):
     def createJogPanel(self):
 
         self.pXJogButton = QPushButton()
-        
+        self.nXJogButton = QPushButton()
+
+        self.pYJogButton = QPushButton()
+        self.nYJogButton = QPushButton()
 
         self.pXJogButton.setText('+X')
-        self.pXJogButton.pressed.connect(self.onPress)
+        self.nXJogButton.setText('-X')
+
+        self.pYJogButton.setText('+Y')
+        self.nYJogButton.setText('-Y')
+
+        dp = 2
+        fr = 2500
+
+        self.pXJogButton.pressed.connect(lambda : self.onPress(dp,0,0,fr))
+        self.nXJogButton.pressed.connect(lambda : self.onPress(-dp,0,0,fr))
+
+        self.pYJogButton.pressed.connect(lambda : self.onPress(0,dp,0,fr))
+        self.nYJogButton.pressed.connect(lambda : self.onPress(0,-dp,0,fr))
+
         self.pXJogButton.released.connect(self.onRelease)
+        self.nXJogButton.released.connect(self.onRelease)
 
+        self.pYJogButton.released.connect(self.onRelease)
+        self.nYJogButton.released.connect(self.onRelease)
+
+
+
+    def setAllJogButtonStates(self,state):
+        self.pXJogButton.setEnabled(state)
+        self.nXJogButton.setEnabled(state)
+        self.nXJogButton.repaint()
+        self.nYJogButton.repaint()
+
+    def onPress(self,x=0,y=0,z=0,f=0):
+
+        print('pressed')
         self.jogTimer = QTimer()
+        print('timer created')
         self.jogTimer.setInterval(25)
-        self.jogTimer.timeout.connect(lambda : self.jogSender(x=0.01,f=1000))
-
-
-
-    
-    def onPress(self):
+        print('interval set')
+        self.jogTimer.timeout.connect(lambda : self.jogSender(x,y,z,f))
+        print('timer connected')
         self.jogTimer.start()
+        print('timer started')
 
     def onRelease(self):
+
+        if self.jogTimer.isActive():
+            print('stopping timer')
+            self.jogTimer.stop()
+            print('timer stopped')
+            self.setAllJogButtonStates(False)
+            print('buttons disabled')
         
-        self.jogTimer.stop()
-        time.sleep(25/1000.0)
+            self.jogCancelSocket.send('0x85')
+            print('jog cancel 2 sent')
+            reply = self.jogCancelSocket.recv()
+            print('jog cancel 2 replied {}'.format(reply))
 
-        self.jogCancelSocket.send('!')
-        rep = self.jogCancelSocket.recv()
-       
-        self.jogCancelSocket.send('0x85')
-        reply = self.jogCancelSocket.recv()
-
+            self.setAllJogButtonStates(True)
+            print('buttons set to true')
 
 
-    # def jogX(self):
-    #     jogCmd = '$J=G91X0.5F1500'
-    #     self.jogSocket.send(jogCmd)
-    #     _ = self.jogSocket.recv()
-
-
-    def jogSender(self,x=0,y=0,z=0,f=0):
+    def jogSender(self,x,y,z,f):
         jogCmd = '$J=G91X{}Y{}Z{}F{}'.format(x,y,z,f)
+        print jogCmd
         self.jogSocket.send(jogCmd)
         self.jogSocket.recv()
 
@@ -354,7 +384,11 @@ class MainWindow(QWidget):
         sideMenuLayout.addWidget(self.unlockButton,6,1)
         sideMenuLayout.addWidget(self.droTextWidget,7,0)
         sideMenuLayout.addWidget(self.currentStatusWidget,8,0)
-        sideMenuLayout.addWidget(self.pXJogButton,9,0)
+
+        sideMenuLayout.addWidget(self.pYJogButton,9,0,1,2)
+        sideMenuLayout.addWidget(self.pXJogButton,10,1)
+        sideMenuLayout.addWidget(self.nXJogButton,10,0)
+        sideMenuLayout.addWidget(self.nYJogButton,11,0,1,2)
 
         gridLayout.addWidget(self.serialMonitor,0,0)
         gridLayout.addLayout(sideMenuLayout,0,1)
