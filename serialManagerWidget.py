@@ -29,6 +29,10 @@ class serialManagerWidget(QGridLayout):
         self.setupComboBox()
         self.setupLayout()
 
+        self.unQuereiedMessages = Queue.Queue()
+        
+        self.ser = None
+
 
 
     def setupSerialManagerButtons(self):
@@ -56,7 +60,7 @@ class serialManagerWidget(QGridLayout):
 
         time.sleep(2)
 
-        self.unQuereiedMessages = Queue.Queue()
+        
         t = threading.Thread(target=messageManager,args=(self.ser,self.unQuereiedMessages))
         t.daemon = True
         t.start()

@@ -8,7 +8,7 @@ import json
 
 
 class serialMonitorWidget(QGridLayout):
-    def __init__(self):
+    def __init__(self,unqueriedMessageQueue):
         """
         Name:   serialMonitorWidget.py
 
@@ -18,15 +18,32 @@ class serialMonitorWidget(QGridLayout):
 
         super(serialMonitorWidget, self).__init__()
 
+        self.unqueriedMessageQueue = unqueriedMessageQueue
         
         context = zmq.Context()
         port = 5001
         self.cmdSocket = context.socket(zmq.REQ)
         self.cmdSocket.RCVTIMEO=1000
         self.cmdSocket.connect("tcp://localhost:%s" % port)
+
+        self.serialMonitorTimer = QTimer()
+        self.serialMonitorTimer.setInterval(200)
+        self.serialMonitorTimer.timeout.connect(self.checkUnqueriedMessages)
         
         self.setupSerialMonitorWidgets()
         self.addGroupBoxes()
+
+    
+    def checkUnqueriedMessages(self):
+        if self.unqueriedMessageQueue.qsize() > 0:
+            # print self.unqueriedMessageQueue.get()
+            self.serialMonitor.append(self.unqueriedMessageQueue.get())
+
+
+
+    def startSerialMonitor(self):
+        pass
+
 
     def sendCommand(self):
         cmd = self.sendLineEdit.text()

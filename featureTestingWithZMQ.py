@@ -137,7 +137,7 @@ class MainWindow(QWidget):
 
         # t = threading.Thread(target=self.serialManager)
 
-        t = threading.Thread(target=messageManager,args=(self.ser,self.unQuereiedMessages))
+        t = threading.Thread(target=message,args=(self.ser,self.unQuereiedMessages))
         t.daemon = True
         t.start()
 

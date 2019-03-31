@@ -147,11 +147,15 @@ class jogWidget(QGridLayout):
         self.nXJogButton.setEnabled(state)
         self.pYJogButton.setEnabled(state)
         self.nYJogButton.setEnabled(state)
+        self.pZJogButton.setEnabled(state)
+        self.nZJogButton.setEnabled(state)
 
         self.nXJogButton.repaint()
         self.pXJogButton.repaint()
         self.nYJogButton.repaint()
         self.pYJogButton.repaint()
+        self.pZJogButton.repaint()
+        self.nZJogButton.repaint()
 
     
     def onPress(self,x=0,y=0,z=0):
