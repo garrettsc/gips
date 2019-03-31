@@ -23,7 +23,7 @@ class serialMonitorWidget(QGridLayout):
         context = zmq.Context()
         port = 5001
         self.cmdSocket = context.socket(zmq.REQ)
-        self.cmdSocket.RCVTIMEO=1000
+        # self.cmdSocket.RCVTIMEO=1000
         self.cmdSocket.connect("tcp://localhost:%s" % port)
 
         self.serialMonitorTimer = QTimer()
@@ -54,9 +54,21 @@ class serialMonitorWidget(QGridLayout):
         reply = self.cmdSocket.recv()
 
         replyList = json.loads(reply)
-        fullReplyString = ''.join(replyList)
+        print replyList
+        if replyList[0] == None:
+            pass
+            # self.serialMonitor.append(replyList[1])
+        else:
+            try:
+                fullReplyString = ''.join(replyList)
+            except IndexError as e:
+                self.serialMonitor.append(replyList)
+                return
 
-        self.serialMonitor.append(fullReplyString)
+            except TypeError as e:
+                return
+
+            self.serialMonitor.append(fullReplyString)
 
 
     def setupSerialMonitorWidgets(self):

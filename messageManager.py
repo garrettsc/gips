@@ -59,7 +59,9 @@ def messageManager(ser,unQuereiedMessages):
     while ser.is_open:
         try:
             while ser.in_waiting:
+                print 'here'
                 incommingMessage = ser.readline().rstrip()
+                print incommingMessage
                 unQuereiedMessages.put(incommingMessage)
             try:
                 outgoingMessage = socket.recv_string(flags=zmq.NOBLOCK)
@@ -86,7 +88,8 @@ def messageManager(ser,unQuereiedMessages):
                     if 'ALARM' in responseMessage:
                         reply = [None,responseMessage]
                         socket.send(json.dumps(reply))
-                        continue
+                        print 'alarm encountered'
+                        break
 
                 okError = responseMessage
                 reply = [fullResponse,okError]

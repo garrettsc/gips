@@ -71,12 +71,15 @@ class droWidget(QGridLayout):
         # if 'Ov:' in resp[0]:
         #     self.serialMonitor.append(resp[0])
 
-        data = resp[0].encode('utf-8')
-        status =  data.replace('<','').replace('>','').split('|')[0]
-        MPos = data.replace('<','').replace('>','').split('|')[1].split(':')[1].split(',')
+        try:
+            data = resp[0].encode('utf-8')
+            status =  data.replace('<','').replace('>','').split('|')[0]
+            MPos = data.replace('<','').replace('>','').split('|')[1].split(':')[1].split(',')
 
-        self.droTextWidget.setText(self.droFormat.format(float(MPos[0]),float(MPos[1]),float(MPos[2])))
-        # self.currentStatusWidget.setText(status)
+            self.droTextWidget.setText(self.droFormat.format(float(MPos[0]),float(MPos[1]),float(MPos[2])))
+            # self.currentStatusWidget.setText(status)
+        except IndexError as e:
+            pass
 
     
     def addGroupBoxes(self):
