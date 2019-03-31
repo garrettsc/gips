@@ -9,6 +9,9 @@ import time
 import threading
 import Queue
 import json
+from messageManager import messageManager
+from jogWidget import jogWidget
+
 class MainWindow(QWidget):
     """ Our Main Window class
     """
@@ -58,19 +61,20 @@ class MainWindow(QWidget):
         socket.bind("tcp://*:{}".format(self.serialManagerPort))
 
         while self.ser.is_open:
-           
+            hexList = {'&JOGCANCEL':0x85,
+                        '&FO':0x91}
+
             try:
                 while self.ser.in_waiting:
                     incommingMessage = self.ser.readline().rstrip()
                     self.unQuereiedMessages.put(incommingMessage)
                 try:
                     outgoingMessage = socket.recv_string(flags=zmq.NOBLOCK)
+                    
+                    if outgoingMessage[0] == '&':
 
-                    if outgoingMessage == '!':
-                        self.ser.write('!')
-                    if outgoingMessage[0:2] == '0x':
-                        
-                        self.ser.write('\x85')
+                        self.ser.write(chr(hexList[outgoingMessage]))
+                        # self.ser.write(chr(incommingMessage))
                         self.ser.write('\n')
                         
                     else:
@@ -79,15 +83,23 @@ class MainWindow(QWidget):
                     fullResponse = ''
                     responseMessage = self.ser.readline().rstrip()
 
+                    if 'ALARM' in responseMessage:
+                        reply = [None,responseMessage]
+                        socket.send(json.dumps(reply))
+                        continue
             
                     while responseMessage != 'ok' and not 'error' in responseMessage:
                         fullResponse += responseMessage + "\n"
                         responseMessage = self.ser.readline().rstrip()
 
+                        if 'ALARM' in responseMessage:
+                            reply = [None,responseMessage]
+                            socket.send(json.dumps(reply))
+                            continue
+
                     okError = responseMessage
                     
                     reply = [fullResponse,okError]
-
 
                     socket.send(json.dumps(reply))
                 
@@ -123,7 +135,9 @@ class MainWindow(QWidget):
 
         time.sleep(2)
 
-        t = threading.Thread(target=self.serialManager)
+        # t = threading.Thread(target=self.serialManager)
+
+        t = threading.Thread(target=messageManager,args=(self.ser,self.unQuereiedMessages))
         t.daemon = True
         t.start()
 
@@ -132,18 +146,20 @@ class MainWindow(QWidget):
         self.cmdSocket = context.socket(zmq.REQ)
         self.cmdSocket.connect("tcp://localhost:%s" % port)
 
-        self.jogSocket = context.socket(zmq.REQ)
-        self.jogSocket.connect("tcp://localhost:%s" % port)
+        # self.jogSocket = context.socket(zmq.REQ)
+        # self.jogSocket.RCVTIMEO=1000
+        # self.jogSocket.connect("tcp://localhost:%s" % port)
 
-        self.jogCancelSocket = context.socket(zmq.REQ)
-        self.jogCancelSocket.connect("tcp://localhost:%s" % port)
+        # self.jogCancelSocket = context.socket(zmq.REQ)
+        # self.jogCancelSocket.connect("tcp://localhost:%s" % port)
+        # self.jogCancelSocket.RCVTIMEO =
 
 
         # Timer will call two methods every 0.2 seconds
         # 1) Check if any unquerried messages are in the queue to print
         # 2) Request a status update
         self.timer = QTimer(self)
-        self.timer.setInterval(25)
+        self.timer.setInterval(100)
         self.connect(self.timer,SIGNAL("timeout()"),self.serialPrinter)
         self.connect(self.timer,SIGNAL('timeout()'),self.requestStatusService)
         self.timer.start()
@@ -183,6 +199,9 @@ class MainWindow(QWidget):
         self.cmdSocket.send('?')   
         response = self.cmdSocket.recv()
         resp = json.loads(response)
+
+        if 'Ov:' in resp[0]:
+            self.serialMonitor.append(resp[0])
 
         data = resp[0].encode('utf-8')
         status =  data.replace('<','').replace('>','').split('|')[0]
@@ -249,8 +268,14 @@ class MainWindow(QWidget):
     def setAllJogButtonStates(self,state):
         self.pXJogButton.setEnabled(state)
         self.nXJogButton.setEnabled(state)
+        self.pYJogButton.setEnabled(state)
+        self.nYJogButton.setEnabled(state)
+
         self.nXJogButton.repaint()
+        self.pXJogButton.repaint()
         self.nYJogButton.repaint()
+        self.pYJogButton.repaint()
+        
 
     def onPress(self,x=0,y=0,z=0,f=0):
 
@@ -267,19 +292,11 @@ class MainWindow(QWidget):
     def onRelease(self):
 
         if self.jogTimer.isActive():
-            print('stopping timer')
             self.jogTimer.stop()
-            print('timer stopped')
             self.setAllJogButtonStates(False)
-            print('buttons disabled')
-        
-            self.jogCancelSocket.send('0x85')
-            print('jog cancel 2 sent')
-            reply = self.jogCancelSocket.recv()
-            print('jog cancel 2 replied {}'.format(reply))
-
+            self.jogCancelSocket.send('&JOGCANCEL')
+            _ = self.jogCancelSocket.recv()
             self.setAllJogButtonStates(True)
-            print('buttons set to true')
 
 
     def jogSender(self,x,y,z,f):
@@ -292,6 +309,8 @@ class MainWindow(QWidget):
 
     def sendCommand(self):
         cmd = self.sendLineEdit.text()
+        
+        self.serialMonitor.append("USER# "+ cmd)
         self.sendLineEdit.clear()
         self.cmdSocket.send_unicode(cmd)
         reply = self.cmdSocket.recv()
@@ -308,6 +327,8 @@ class MainWindow(QWidget):
         self.serialMonitor.setReadOnly(True)
 
     def createCommandSenderMenu(self):
+
+
         self.sendLineEdit = QLineEdit()
         self.sendButton = QPushButton("Send")
         self.sendButton.clicked.connect(self.sendCommand)
@@ -318,6 +339,13 @@ class MainWindow(QWidget):
         self.commandSendLayout.addWidget(self.sendLineEdit)
         self.commandSendLayout.addWidget(self.sendButton)
 
+    
+    def upFeed(self):
+        
+        print('Jog Override')
+        self.jogSocket.send('&FO')
+        print(self.jogSocket.recv())
+
 
     def createSideMenu(self):
         #Side Menu Buttons
@@ -326,6 +354,9 @@ class MainWindow(QWidget):
 
         self.homeButton = QPushButton('Home')
         self.unlockButton = QPushButton('Unlock')
+
+        self.feedOverideButton = QPushButton('FO+')
+        self.feedOverideButton.clicked.connect(self.upFeed)
 
 
         #Create COM port combo box
@@ -389,10 +420,18 @@ class MainWindow(QWidget):
         sideMenuLayout.addWidget(self.pXJogButton,10,1)
         sideMenuLayout.addWidget(self.nXJogButton,10,0)
         sideMenuLayout.addWidget(self.nYJogButton,11,0,1,2)
+        sideMenuLayout.addWidget(self.feedOverideButton,12,0)
+
+        self.jogWidget = jogWidget()
+
+        sideMenuLayout.addLayout(self.jogWidget,12,1)
+
 
         gridLayout.addWidget(self.serialMonitor,0,0)
         gridLayout.addLayout(sideMenuLayout,0,1)
         gridLayout.addLayout(self.commandSendLayout,1,0)
+
+        
         
 
         self.setLayout(gridLayout)
