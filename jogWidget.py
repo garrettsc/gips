@@ -160,7 +160,7 @@ class jogWidget(QGridLayout):
     
     def onPress(self,x=0,y=0,z=0):
         feed = self.checkFeedRate()
-        stepSize = 0.1
+        stepSize = 1
 
         self.jogTimer = QTimer()
         self.jogTimer.setInterval(25)
@@ -169,7 +169,7 @@ class jogWidget(QGridLayout):
 
     def jogSender(self,x,y,z,f):
         jogCmd = '$J=G91X{}Y{}Z{}F{}'.format(x,y,z,f)
-        print jogCmd
+        # print jogCmd
         self.jogSocket.send(jogCmd)
         self.jogSocket.recv()
 

@@ -36,14 +36,7 @@ class serialMonitorWidget(QGridLayout):
     
     def checkUnqueriedMessages(self):
         if self.unqueriedMessageQueue.qsize() > 0:
-            # print self.unqueriedMessageQueue.get()
             self.serialMonitor.append(self.unqueriedMessageQueue.get())
-
-
-
-    def startSerialMonitor(self):
-        pass
-
 
     def sendCommand(self):
         cmd = self.sendLineEdit.text()
@@ -54,7 +47,7 @@ class serialMonitorWidget(QGridLayout):
         reply = self.cmdSocket.recv()
 
         replyList = json.loads(reply)
-        print replyList
+        # print replyList
         if replyList[0] == None:
             pass
             # self.serialMonitor.append(replyList[1])

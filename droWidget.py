@@ -22,6 +22,11 @@ class droWidget(QGridLayout):
         self.droTimer.setInterval(100)
         self.droTimer.timeout.connect(self.requestStatusService)
         
+        self.currentStatusDict = {'Status':None,
+                                  'WPos:' :None,
+                                  'Bf'    :None,
+                                  'FS'    :None,
+                                  'MPos'  :None}
 
 
         self.setupDroBox()
@@ -39,16 +44,28 @@ class droWidget(QGridLayout):
 
 
     def setupDroBox(self):
-
-        self.droTextWidget = QLabel()
-        self.droFormat = "X    {:9.4f}\nY    {:9.4f}\nZ    {:9.4f}"
-        self.droTextWidget.setText(self.droFormat.format(0,0,0))
         font = QFont()
         font.setPointSize(15)
+        font.setBold(True)
+
+        self.droTextWidget = QLabel()
+        self.statusWidget = QLabel()
+
+        self.statusWidget.setFrameStyle(QFrame.Panel | QFrame.Raised)
+
+
+
+        self.droFormat = "X    {:9.4f}\nY    {:9.4f}\nZ    {:9.4f}"
+        # self.droFormat = "<font size=5>X    {:9.4f}<br/><font size=1>{:9.2f}"
+        self.droTextWidget.setText(self.droFormat.format(0,0,0))
+
         self.droTextWidget.setFont(font)
+        self.statusWidget.setFont(font)
 
         droLayout = QVBoxLayout()
+        droLayout.addWidget(self.statusWidget)
         droLayout.addWidget(self.droTextWidget)
+        
 
         self.droBox = QGroupBox("DRO")
         self.droBox.setLayout(droLayout)
@@ -72,12 +89,25 @@ class droWidget(QGridLayout):
         #     self.serialMonitor.append(resp[0])
 
         try:
-            data = resp[0].encode('utf-8')
-            status =  data.replace('<','').replace('>','').split('|')[0]
-            MPos = data.replace('<','').replace('>','').split('|')[1].split(':')[1].split(',')
+            messageEncoded = resp[0].encode('utf-8').strip()
 
-            self.droTextWidget.setText(self.droFormat.format(float(MPos[0]),float(MPos[1]),float(MPos[2])))
-            # self.currentStatusWidget.setText(status)
+            messageSplit = messageEncoded.replace('<','').replace('>','').split('|')
+
+            status = messageSplit[0]
+            self.currentStatusDict['Status'] = status
+            for message in messageSplit[1:]:
+                messageName, messageContents = message.split(':')
+                self.currentStatusDict[messageName] = messageContents.split(',')
+
+
+            #Update the 'Status' label widget
+            self.statusWidget.setText(self.currentStatusDict['Status'])
+
+            #Update the Digital Read Out widget
+            self.droTextWidget.setText(self.droFormat.format(float(self.currentStatusDict['WPos'][0]),
+                                                             float(self.currentStatusDict['WPos'][1]),
+                                                             float(self.currentStatusDict['WPos'][2])))
+
         except IndexError as e:
             pass
 

@@ -70,10 +70,10 @@ class MainWindow(QWidget):
         
     
     def checkIfConnected(self):
-        print('checking if connected...')
+        # print('checking if connected...')
         if not self.SMW.ser == None:
             if self.SMW.ser.is_open:
-                print ('Is Connected')
+                # print ('Is Connected')
                 if not self.dro.droTimer.isActive():
                     self.dro.startDro()
             else:
