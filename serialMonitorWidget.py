@@ -41,7 +41,7 @@ class serialMonitorWidget(QGridLayout):
     def sendCommand(self):
         cmd = self.sendLineEdit.text()
         
-        self.serialMonitor.append("USER# "+ cmd)
+        self.serialMonitor.append("<b>User cmd :: <b/>"+ cmd)
         self.sendLineEdit.clear()
         self.cmdSocket.send_unicode(cmd)
         reply = self.cmdSocket.recv()

@@ -36,7 +36,7 @@ class droWidget(QGridLayout):
         context = zmq.Context()
         port = 5001
         self.statusSocket = context.socket(zmq.REQ)
-        self.statusSocket.RCVTIMEO=1000
+        # self.statusSocket.RCVTIMEO=1000
         self.statusSocket.connect("tcp://localhost:%s" % port)
 
         self.droTimer.start()
@@ -78,8 +78,9 @@ class droWidget(QGridLayout):
         """
 
         try:
-            self.statusSocket.send('?')   
+            self.statusSocket.send('?')
             response = self.statusSocket.recv()
+
         except:
             print ('exception')
             return
@@ -98,6 +99,7 @@ class droWidget(QGridLayout):
             for message in messageSplit[1:]:
                 messageName, messageContents = message.split(':')
                 self.currentStatusDict[messageName] = messageContents.split(',')
+                # print self.currentStatusDict
 
 
             #Update the 'Status' label widget

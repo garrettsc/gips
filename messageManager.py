@@ -68,7 +68,7 @@ def messageManager(ser,unQuereiedMessages):
                 if outgoingMessage[0] == '&':
                     ser.write(chr(hexList[outgoingMessage]))
                     ser.write('\n')
-                    
+                
                 else:
                     ser.write("{}\n".format(outgoingMessage))
 
@@ -80,8 +80,7 @@ def messageManager(ser,unQuereiedMessages):
                     socket.send(json.dumps(reply))
                     continue
         
-                while responseMessage != 'ok' and not 'error' in responseMessage:
-                    
+                while responseMessage != 'ok' and not 'error' in responseMessage and not 'Hold' in responseMessage:
                     if len(responseMessage) > 0:
                         fullResponse += responseMessage + "\n"
                     responseMessage = ser.readline().rstrip()
@@ -90,8 +89,13 @@ def messageManager(ser,unQuereiedMessages):
                         time.sleep(1)
                         break
 
-                okError = responseMessage
-                reply = [fullResponse,okError]
+ 
+                if 'Hold' in responseMessage:
+                    reply = [responseMessage,'ok']
+                
+                else:
+                    okError = responseMessage
+                    reply = [fullResponse,okError]
 
                 socket.send(json.dumps(reply))
             

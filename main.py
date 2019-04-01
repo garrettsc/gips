@@ -14,6 +14,9 @@ from jogWidget import jogWidget
 from serialManagerWidget import serialManagerWidget
 from serialMonitorWidget import serialMonitorWidget
 from droWidget import droWidget
+from cmdButtonWidget import cmdButtonWidget
+from cmdFeedWidget import cmdFeedWidget
+from cmdRapidWidget import cmdRapidWidget
 
 class MainWindow(QWidget):
     """ Our Main Window class
@@ -48,11 +51,17 @@ class MainWindow(QWidget):
         self.serMon = serialMonitorWidget(self.SMW.unQuereiedMessages)
         self.serMon.serialMonitorTimer.start()
         self.dro = droWidget()
+        self.quickCmdWidget = cmdButtonWidget()
+        self.feedCmdWidget = cmdFeedWidget()
+        self.cmdRapidWidget = cmdRapidWidget()
 
         gridLayout.addLayout(self.SMW,0,0)
         gridLayout.addLayout(self.jogWidget,1,0)
-        gridLayout.addLayout(self.serMon,2,0,1,2)
+        gridLayout.addLayout(self.serMon,2,0,2,2)
         gridLayout.addLayout(self.dro,1,1)
+        gridLayout.addLayout(self.quickCmdWidget,1,2)
+        gridLayout.addLayout(self.feedCmdWidget,2,2)
+        gridLayout.addLayout(self.cmdRapidWidget,3,2)
 
 
         self.setLayout(gridLayout)
