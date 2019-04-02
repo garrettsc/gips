@@ -24,7 +24,7 @@ class cmdButtonWidget(QGridLayout):
         context = zmq.Context()
         port = 5001
         self.cmdButtonSocket = context.socket(zmq.REQ)
-        self.cmdButtonSocket.RCVTIMEO=1000
+        # self.cmdButtonSocket.RCVTIMEO=1000
         self.cmdButtonSocket.connect("tcp://localhost:%s" % port)
         
     def setupCmdButtonBox(self):

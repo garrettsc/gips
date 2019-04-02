@@ -99,10 +99,12 @@ class droWidget(QGridLayout):
             for message in messageSplit[1:]:
                 messageName, messageContents = message.split(':')
                 self.currentStatusDict[messageName] = messageContents.split(',')
-                # print self.currentStatusDict
+                print self.currentStatusDict
 
 
             #Update the 'Status' label widget
+            # pLabel->setStyleSheet("QLabel { background-color : red; color : blue; }");
+            self.updateStatusWidget(self.currentStatusDict['Status'])
             self.statusWidget.setText(self.currentStatusDict['Status'])
 
             #Update the Digital Read Out widget
@@ -113,7 +115,20 @@ class droWidget(QGridLayout):
         except IndexError as e:
             pass
 
-    
+    def updateStatusWidget(self,status):
+        if 'Alarm' in status:
+            self.statusWidget.setStyleSheet("QLabel {background-color : red}")
+        if 'Idle' in status:
+            self.statusWidget.setStyleSheet("QLabel {background-color : grey}")
+        if 'Run' in status:
+            self.statusWidget.setStyleSheet("QLabel {background-color : green}")
+        
+        if 'Hold' in status:
+            self.statusWidget.setStyleSheet("QLabel {background-color : yellow}")
+
+        if 'Jog' in status:
+            self.statusWidget.setStyleSheet("QLabel {background-color : blue}")
+
     def addGroupBoxes(self):
         self.addWidget(self.droBox,0,0)
         # self.addWidget(self.feedRadioGroupBox,0,1)

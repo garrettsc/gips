@@ -80,18 +80,19 @@ class cmdRapidWidget(QGridLayout):
 
     def rapidTwentyFive(self):
 
-        self.feedButtonSocket.send('&R25')
-        reply = self.feedButtonSocket.recv()
+        self.rapidButtonSocket.send('&R25')
+        reply = self.rapidButtonSocket.recv()
+        print reply
 
     def rapidFifty(self):
 
-        self.feedButtonSocket.send('&R50')
-        reply = self.feedButtonSocket.recv()
+        self.rapidButtonSocket.send('&R50')
+        reply = self.rapidButtonSocket.recv()
     
     def rapidOneHundred(self):
 
-        self.feedButtonSocket.send('&R100')
-        reply = self.feedButtonSocket.recv()
+        self.rapidButtonSocket.send('&R100')
+        reply = self.rapidButtonSocket.recv()
         
 
 
