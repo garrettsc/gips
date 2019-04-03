@@ -52,7 +52,7 @@ serialManagerPort = 5001
 alarmState = False
 
 def messageManager(ser,unQuereiedMessages):
-
+    readFromSerial()
     #Create and bind to zmq port for request / reply messages
     context = zmq.Context()
     socket = context.socket(zmq.REP)
@@ -104,3 +104,7 @@ def messageManager(ser,unQuereiedMessages):
                 pass
         except:
             pass
+
+    
+def readFromSerial(self):
+    print 'here'
