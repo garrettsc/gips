@@ -1,4 +1,4 @@
-from PySide.QtGui import QWidget, QPushButton,QHBoxLayout, QApplication, QGridLayout, QLCDNumber, QLabel, QFrame, QTabWidget, QFont, QTextEdit, QComboBox, QFormLayout, QLineEdit, QCheckBox
+from PySide.QtGui import QWidget, QPushButton,QHBoxLayout, QApplication, QGridLayout, QLCDNumber, QLabel, QFrame, QTabWidget, QFont, QTextEdit, QComboBox, QFormLayout, QLineEdit, QCheckBox, QIcon
 from PySide.QtCore import QDateTime, QTimer, SIGNAL, QSize, Qt
 
 import zmq
@@ -30,6 +30,8 @@ class MainWindow(QWidget):
         QWidget.__init__(self)
         self.setWindowTitle("grbl Serial Monitor")
         self.setGeometry(100, 100, 1000, 300)
+        appIcon = QIcon('icon.png')
+        self.setWindowIcon(appIcon)
 
          
     def launch(self):

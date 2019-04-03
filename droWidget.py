@@ -99,7 +99,7 @@ class droWidget(QGridLayout):
             for message in messageSplit[1:]:
                 messageName, messageContents = message.split(':')
                 self.currentStatusDict[messageName] = messageContents.split(',')
-                print self.currentStatusDict
+                # print self.currentStatusDict
 
 
             #Update the 'Status' label widget

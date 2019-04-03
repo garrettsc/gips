@@ -49,6 +49,7 @@ hexList = {'&JOGCANCEL':0x85,
 
 ######## ZMQ Request / Reply port ########
 serialManagerPort = 5001
+alarmState = False
 
 def messageManager(ser,unQuereiedMessages):
 
