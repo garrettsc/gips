@@ -45,7 +45,7 @@ class settingsWidget(QGridLayout):
 
         self.loadSettingsGrblButton = QPushButton('Load from GRBL')
         self.loadSettingsFile = QPushButton('Load from File')
-        self.writeSettingsToGrbl = QPushButton('Write Settings')
+        self.writeSettingsToGrbl = QPushButton('Write Settings to GRBL')
         self.saveSettingsToFile = QPushButton('Save to File')
 
         self.loadSettingsGrblButton.clicked.connect(self.getSettingsFromGrbl)
@@ -59,12 +59,12 @@ class settingsWidget(QGridLayout):
 
         self.settingsLayout = QGridLayout()
         self.settingsLayout.addWidget(self.tableView,0,0)
-        self.settingsLayout.addLayout(self.settingsButtonLayout,0,1)
+        self.settingsLayout.addLayout(self.settingsButtonLayout,1,0)
 
         # self.serialMonitorLayout.addWidget(self.serialMonitor)
         # self.serialMonitorLayout.addLayout(self.commandSendLayout)
 
-        self.tableGroupBox = QGroupBox("Serial Monitor")
+        self.tableGroupBox = QGroupBox("GRBL Settings")
         self.tableGroupBox.setLayout(self.settingsLayout)
 
 

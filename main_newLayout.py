@@ -50,6 +50,7 @@ class MainWindow(QWidget):
     def SetLayout(self):
         gridLayout = QGridLayout()
 
+
         self.jogWidget = jogWidget()
         self.SMW = serialManagerWidget()
         self.serMon = serialMonitorWidget(self.SMW.unQuereiedMessages)
@@ -61,16 +62,39 @@ class MainWindow(QWidget):
         
         self.settingsWidget = settingsWidget()
 
-        gridLayout.addLayout(self.SMW,0,0)
-        gridLayout.addLayout(self.jogWidget,1,0)
-        gridLayout.addLayout(self.serMon,2,0,2,2)
-        gridLayout.addLayout(self.dro,1,1)
-        gridLayout.addLayout(self.quickCmdWidget,0,1)
-        gridLayout.addLayout(self.feedCmdWidget,4,0)
-        gridLayout.addLayout(self.cmdRapidWidget,4,2)
 
+        self.manualControlLayout = QGridLayout()
+        self.manualControlLayout.addLayout(self.jogWidget,0,0,2,2)
+        self.manualControlLayout.addLayout(self.feedCmdWidget,0,3)
+        self.manualControlLayout.addLayout(self.cmdRapidWidget,1,3)
+        
+        self.manualControlWidget = QWidget()
+        self.manualControlWidget.setLayout(self.manualControlLayout)
+
+        self.serialMonitorWidget = QWidget()
+        self.serialMonitorWidget.setLayout(self.serMon)
+
+        self.settingsTabWidget = QWidget()
+        self.settingsTabWidget.setLayout(self.settingsWidget)
+
+        self.runProgramWidget = QLabel('Place gcode loading widget here')
+
+        self.tab = QTabWidget()
+        self.tab.addTab(self.manualControlWidget,'Manual')
+        self.tab.addTab(self.runProgramWidget,'Run Program')
+        self.tab.addTab(self.serialMonitorWidget,'Serial Monitor')
+        self.tab.addTab(self.settingsTabWidget,'GRBL Settings')
+
+        self.tab.setStyleSheet("QTabBar::tab { height: 25px; width: 150px}")
+
+        gridLayout.addLayout(self.SMW,0,0,1,2)
+
+        gridLayout.addLayout(self.dro,1,0)
+        gridLayout.addLayout(self.quickCmdWidget,1,1)
+
+        
+        gridLayout.addWidget(self.tab,5,0,1,6)
         gridLayout.addLayout(self.settingsWidget,0,2,4,3)
-
 
         self.setLayout(gridLayout)
 
@@ -102,7 +126,7 @@ class MainWindow(QWidget):
 if __name__ == '__main__':
     # Exception Handling
     try:
-        QApplication.setStyle('plastique')
+        # QApplication.setStyle('plastique')
         myApp = QApplication(sys.argv)
         mainWindow = MainWindow()
 

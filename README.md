@@ -1,16 +1,30 @@
 # GIPS - grbl Interactive Programming System
 
+A cross platform GRBL CNC controller interface.
 
 
 # Release 0.1 Features:
 1) Connect to grbl - Done
 2) Display serial communication - In progress
 3) View and set grbl parameters - In progress
-4) X,Y,Z DRO - Soon
-5) Home
-6) Jog
-7) Stream gcode from file
-8) Current state
+4) X,Y,Z DRO - In Progress
+5) Home - In Progress
+6) Jog - In Progress
+7) Stream gcode from file - Soon
+8) Current state - In Progress
+
+## Current 0.1 Release Status / Immediate To-Dos:
+
+Slow but steady progress to a semi-stable release. currently no gcode streaming, however
+the backbone structure is there for message streaming. Before moving onto message streaming
+there are a few stability and code readability issues to address.
+
+1) grbl settings reading, writing, and saving.
+2) Jogging needs a default feed rate (and units)
+3) DRO format needs nailed down (aligning decimals)
+4) Proper exit plan (thread shutdown, killing any hanging zmq recv methods)
+5) Remove the 'group box' from widgets to decrease widget footprint
+6) Consider using QWidget as the base class in place of QGridLayout
 
 ## Display serial communication
 Next steps involve parsing the grbls output.
@@ -23,50 +37,6 @@ Next steps involve parsing the grbls output.
 7) ok messages 
 8) feedback messages [ ]
 
-
-## General notes / brainstorms for grbl serial communication
-
-1) select port
-2) Click connect
-3) Wait for response (Timeout after so many seconds?)
-4) Start serial manager loop
-
-From the grbl documentation, sending a command to grbl proceeds as follows:
-
-1)  Command is sent and one of the following occurs
-2a) An error message is thrown indicating the command is not accepted
-2b) Grbl responds with additional information followed by an 'ok' message
-
-The serial manager loop is the single piece of code responsible for reading and writing serial data. Having a single
-loop responsible for serial communication prevents the program from attempting to read or write to the port at the same time.
-The Loop should have very basic functionality.
-
-Listen for unsolicited messages. These include:
-- Welcome Message
-- Alarm Message
-- Any others....
-
-Send a message and wait for an 'ok'.
-
-### Message Categories:
-
-Response Messages:
-- [ok] - Message recieved, understood, and acted or will be acted upon
-- [error] - Message recieved, however there was an error and the message will be purged and not acted upon
-
-Push Messages:
-- < > - Status report
-- Grbl X.Xx ['$' for help] - Welcome message after initialization
-- ALARM:x - Alarm message
-- Several others that can be found on grbls wiki
-
-
-
-- System command '$' commands
-- ok
-- error
-- alarm
-- 
 
 
 ### Contributing:

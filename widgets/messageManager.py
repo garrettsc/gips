@@ -16,12 +16,10 @@ Description:
     and alarms.
 
     The second block checks if any messages are queued up to be sent to grbl.
-    If a message has been 'requested', the message will be sent to grbl. The 
-    serial manager will read the 'relpy' from grbl until either an 'ok' or
+    If a message has been 'requested' to be sent, the message will be sent to grbl. The 
+    serial manager will read the 'reply' from grbl until either an 'ok' or
     'error' message is recieved. Once the 'ok' or 'error' is recieved, the entire
     reply message is sent back to the entity that requested the message be sent.
-
-
 """
 
 #### Realtime commands ####
@@ -50,85 +48,27 @@ hexList = {'&JOGCANCEL':0x85,
 ######## ZMQ Request / Reply port ########
 serialManagerPort = 5001
 alarmState = False
-
-def messageManager(ser,unQuereiedMessages):
-    readFromSerial()
-    #Create and bind to zmq port for request / reply messages
-    context = zmq.Context()
-    socket = context.socket(zmq.REP)
-    socket.bind("tcp://*:{}".format(serialManagerPort))
-
-    while ser.is_open: 
-
-        try:
-            while ser.in_waiting:
-                incommingMessage = ser.readline().rstrip()
-                unQuereiedMessages.put(incommingMessage)
-
-            try:
-                outgoingMessage = socket.recv_string(flags=zmq.NOBLOCK)
-                
-                if outgoingMessage[0] == '&':
-                    ser.write(chr(hexList[outgoingMessage]))
-                    ser.write('\n')
-                
-                else:
-                    ser.write("{}\n".format(outgoingMessage))
-
-                fullResponse = ''
-                responseMessage = ser.readline().rstrip()
-
-                if 'ALARM' in responseMessage:
-                    reply = [None,responseMessage]
-                    socket.send(json.dumps(reply))
-                    continue
-        
-                while responseMessage != 'ok' and not 'error' in responseMessage and not 'Hold' in responseMessage:
-                    if len(responseMessage) > 0:
-                        fullResponse += responseMessage + "\n"
-                    responseMessage = ser.readline().rstrip()
-
-                    if 'ALARM' in responseMessage:
-                        time.sleep(1)
-                        break
-
- 
-                if 'Hold' in responseMessage:
-                    reply = [responseMessage,'ok']
-                
-                else:
-                    okError = responseMessage
-                    reply = [fullResponse,okError]
-
-                socket.send(json.dumps(reply))
-            
-            except zmq.Again as e:
-                pass
-        except:
-            pass
-
     
 def readFromSerial(ser,socket):
     
     message = ser.readline().rstrip()
 
     if 'ALARM' in message:
-        # socket.send(json.dumps(message))
-        return 2, message 
+        return 2, message       # An alarm was encountered
 
     elif 'error' in message:
-        # socket.send(json.dumps(message))
-        return 1, message
+        return 1, message       # An error was encountered
 
     else:
-        return 0, message
+        return 0, message       # Grbl returned an 'ok'
 
 
 def readReply(ser,socket):
-    
+    """
+    This method reads the serial buffer until grbl proper conditions are met
+    """
     state, message = readFromSerial(ser,socket)
     fullReplyList = [message]
-    # print fullReplyList
 
     while state == 0 and not 'Hold' in message and not 'ok' in message:
         state, message = readFromSerial(ser,socket)
@@ -141,7 +81,7 @@ def readReply(ser,socket):
 
         
 
-def messageManager2(ser,unQuereiedMessages):
+def messageManager(ser,unQuereiedMessages):
     
     #Create and bind to zmq port for request / reply messages
     context = zmq.Context()
@@ -151,12 +91,10 @@ def messageManager2(ser,unQuereiedMessages):
     state = 0
     while ser.is_open:
         try:
-
-
-            #Check incomming messages
+            #Check incomming unsolicited messages
             while ser.in_waiting:
                 state, message = readFromSerial(ser,socket)     #Read any unsolicited messages in the buffer
-                unQuereiedMessages.put(message)                 #Put messages into queue
+                unQuereiedMessages.put(message)                 #Put messages into queue for the serial monitor
 
                 if state == 2:                                  #If any of the messages resulted in
                     continue                                    #an alarm state, continue
@@ -165,7 +103,7 @@ def messageManager2(ser,unQuereiedMessages):
             try:
                 outgoingMessage = socket.recv_string(flags=zmq.NOBLOCK)
 
-                if state in [0,1]:                              #If normal or alarm state
+                if state in [0,1]:                              #If normal or error state
 
                     if outgoingMessage[0] == '&':
                             ser.write(chr(hexList[outgoingMessage]))
@@ -183,10 +121,10 @@ def messageManager2(ser,unQuereiedMessages):
                         ser.write('{}\n'.format(outgoingMessage))
 
                 state, replyMessageList = readReply(ser,socket)        #Get grbls response 'state' and message.
-                                                                # State 0 - ok
-                                                                # State 1 - error
-                                                                # State 2 - Alarm
-                # print replyMessageList
+                                                                        # State 0 - ok
+                                                                        # State 1 - error
+                                                                        # State 2 - Alarm
+
                 reply = json.dumps((state,"\n".join(replyMessageList)))
                 socket.send(reply)
 
@@ -194,15 +132,3 @@ def messageManager2(ser,unQuereiedMessages):
                 pass #No outgoing messages
         except:
             pass #Some error occured with serial
-
-    
-
-    
-
-
-
-    # Read the serial buffer until newline
-    # If the message is not an ALARM or ERROR, return the string
-    # If the message is an ERROR, reply to the sender that an error has occured and continue
-    # If the message is an ALARM, reply to the sender
-
