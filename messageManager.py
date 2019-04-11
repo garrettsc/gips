@@ -58,11 +58,13 @@ def messageManager(ser,unQuereiedMessages):
     socket = context.socket(zmq.REP)
     socket.bind("tcp://*:{}".format(serialManagerPort))
 
-    while ser.is_open:
+    while ser.is_open: 
+
         try:
             while ser.in_waiting:
                 incommingMessage = ser.readline().rstrip()
                 unQuereiedMessages.put(incommingMessage)
+
             try:
                 outgoingMessage = socket.recv_string(flags=zmq.NOBLOCK)
                 
@@ -106,5 +108,101 @@ def messageManager(ser,unQuereiedMessages):
             pass
 
     
-def readFromSerial(self):
-    print 'here'
+def readFromSerial(ser,socket):
+    
+    message = ser.readline().rstrip()
+
+    if 'ALARM' in message:
+        # socket.send(json.dumps(message))
+        return 2, message 
+
+    elif 'error' in message:
+        # socket.send(json.dumps(message))
+        return 1, message
+
+    else:
+        return 0, message
+
+
+def readReply(ser,socket):
+    
+    state, message = readFromSerial(ser,socket)
+    fullReplyList = [message]
+    # print fullReplyList
+
+    while state == 0 and not 'Hold' in message and not 'ok' in message:
+        state, message = readFromSerial(ser,socket)
+        fullReplyList.append(message)
+        
+        if message == 'ok':
+            break
+
+    return state, fullReplyList
+
+        
+
+def messageManager2(ser,unQuereiedMessages):
+    
+    #Create and bind to zmq port for request / reply messages
+    context = zmq.Context()
+    socket = context.socket(zmq.REP)
+    socket.bind("tcp://*:{}".format(serialManagerPort))
+    
+    state = 0
+    while ser.is_open:
+        try:
+
+
+            #Check incomming messages
+            while ser.in_waiting:
+                state, message = readFromSerial(ser,socket)     #Read any unsolicited messages in the buffer
+                unQuereiedMessages.put(message)                 #Put messages into queue
+
+                if state == 2:                                  #If any of the messages resulted in
+                    continue                                    #an alarm state, continue
+
+            #Send outbound messages
+            try:
+                outgoingMessage = socket.recv_string(flags=zmq.NOBLOCK)
+
+                if state in [0,1]:                              #If normal or alarm state
+
+                    if outgoingMessage[0] == '&':
+                            ser.write(chr(hexList[outgoingMessage]))
+                            ser.write('\n')                     #Not sure if this is required for extended ascii
+   
+                    else:
+                        if not outgoingMessage == '?':
+                            print outgoingMessage
+                        ser.write("{}\n".format(outgoingMessage))
+                        
+
+                else:                                           #If in alarm state, only accept these commands
+
+                    if outgoingMessage in ['$H','$h','$X','$x']:
+                        ser.write('{}\n'.format(outgoingMessage))
+
+                state, replyMessageList = readReply(ser,socket)        #Get grbls response 'state' and message.
+                                                                # State 0 - ok
+                                                                # State 1 - error
+                                                                # State 2 - Alarm
+                # print replyMessageList
+                reply = json.dumps((state,"\n".join(replyMessageList)))
+                socket.send(reply)
+
+            except zmq.Again as e:
+                pass #No outgoing messages
+        except:
+            pass #Some error occured with serial
+
+    
+
+    
+
+
+
+    # Read the serial buffer until newline
+    # If the message is not an ALARM or ERROR, return the string
+    # If the message is an ERROR, reply to the sender that an error has occured and continue
+    # If the message is an ALARM, reply to the sender
+

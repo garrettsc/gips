@@ -12,11 +12,13 @@ import json
 from messageManager import messageManager
 from jogWidget import jogWidget
 from serialManagerWidget import serialManagerWidget
+from messageManager import *
 from serialMonitorWidget import serialMonitorWidget
 from droWidget import droWidget
 from cmdButtonWidget import cmdButtonWidget
 from cmdFeedWidget import cmdFeedWidget
 from cmdRapidWidget import cmdRapidWidget
+from settingsWidget import *
 
 class MainWindow(QWidget):
     """ Our Main Window class
@@ -56,14 +58,18 @@ class MainWindow(QWidget):
         self.quickCmdWidget = cmdButtonWidget()
         self.feedCmdWidget = cmdFeedWidget()
         self.cmdRapidWidget = cmdRapidWidget()
+        
+        self.settingsWidget = settingsWidget()
 
         gridLayout.addLayout(self.SMW,0,0)
         gridLayout.addLayout(self.jogWidget,1,0)
         gridLayout.addLayout(self.serMon,2,0,2,2)
         gridLayout.addLayout(self.dro,1,1)
-        gridLayout.addLayout(self.quickCmdWidget,1,2)
-        gridLayout.addLayout(self.feedCmdWidget,2,2)
-        gridLayout.addLayout(self.cmdRapidWidget,3,2)
+        gridLayout.addLayout(self.quickCmdWidget,0,1)
+        gridLayout.addLayout(self.feedCmdWidget,4,0)
+        gridLayout.addLayout(self.cmdRapidWidget,4,2)
+
+        gridLayout.addLayout(self.settingsWidget,0,2,4,3)
 
 
         self.setLayout(gridLayout)

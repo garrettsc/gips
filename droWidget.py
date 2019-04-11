@@ -90,7 +90,7 @@ class droWidget(QGridLayout):
         #     self.serialMonitor.append(resp[0])
 
         try:
-            messageEncoded = resp[0].encode('utf-8').strip()
+            messageEncoded = resp[1].encode('utf-8').strip()
 
             messageSplit = messageEncoded.replace('<','').replace('>','').split('|')
 

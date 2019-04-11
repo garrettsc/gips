@@ -4,6 +4,7 @@ from PySide.QtCore import QTimer
 import serial.tools.list_ports
 import threading
 from messageManager import messageManager
+from messageManager import *
 
 import sys
 import time
@@ -61,7 +62,10 @@ class serialManagerWidget(QGridLayout):
         time.sleep(2)
 
         
-        t = threading.Thread(target=messageManager,args=(self.ser,self.unQuereiedMessages))
+        # t = threading.Thread(target=messageManager,args=(self.ser,self.unQuereiedMessages))
+        t = threading.Thread(target=messageManager2,args=(self.ser,self.unQuereiedMessages))
+        
+        print 'thread started'
         t.daemon = True
         t.start()
 
@@ -72,6 +76,7 @@ class serialManagerWidget(QGridLayout):
 
         self.connectButton.setEnabled(False)
         self.disconnectButton.setEnabled(True)
+        print ('done with serial manager')
 
     def disconnectFromSerial(self):
         self.ser.close()

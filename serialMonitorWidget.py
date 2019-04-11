@@ -47,13 +47,12 @@ class serialMonitorWidget(QGridLayout):
         reply = self.cmdSocket.recv()
 
         replyList = json.loads(reply)
-        # print replyList
-        if replyList[0] == None:
+        if replyList[0] != 0:
             pass
             # self.serialMonitor.append(replyList[1])
         else:
             try:
-                fullReplyString = ''.join(replyList)
+                fullReplyString = replyList[1]
             except IndexError as e:
                 self.serialMonitor.append(replyList)
                 return

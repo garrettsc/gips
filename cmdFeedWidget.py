@@ -89,7 +89,7 @@ class cmdFeedWidget(QGridLayout):
         self.feedButtonSocket.send('?')
         reply = self.feedButtonSocket.recv()
         reply = json.loads(reply)
-        state = reply[0].replace('<','').replace('>','').split('|')[0]
+        state = reply[1].replace('<','').replace('>','').split('|')[0]
         
         if state == 'Run':
 
