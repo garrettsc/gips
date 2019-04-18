@@ -1,5 +1,5 @@
 from PySide.QtGui import QPushButton, QWidget, QApplication, QGridLayout, QSpacerItem, QFrame, QLabel, QGroupBox, QRadioButton, QVBoxLayout
-from PySide.QtCore import QTimer
+from PySide.QtCore import QTimer, Signal, SIGNAL
 
 import sys
 import time
@@ -7,6 +7,9 @@ import zmq
 
 
 class jogWidget(QGridLayout):
+
+    testSignal = Signal(str)
+
     def __init__(self):
         """
         Name:   jogWidget.py
@@ -23,8 +26,11 @@ class jogWidget(QGridLayout):
         # Feed rate list
         self.feedRates = [100,500,1000,1500,2000]
 
+        
+        # self.testSignal = Signal(str)
+
         # Button Sizes
-        widthHeight = 35
+        widthHeight = 65
         self.jogButtonWidth = widthHeight
         self.jogButtonHeight = widthHeight
 
@@ -40,6 +46,13 @@ class jogWidget(QGridLayout):
         self.setupJogButtonBox()
         self.setupFeedBox()
         self.addGroupBoxes()
+
+        self.buttonStates = False
+        self.setButtonStates(self.buttonStates)
+
+
+
+    
 
     def setupJogButtonBox(self):
 
@@ -173,6 +186,14 @@ class jogWidget(QGridLayout):
         self.jogSocket.send(jogCmd)
         self.jogSocket.recv()
 
+        # self.testSignal.emit(jogCmd)
+        # self.emit(SIGNAL("testSignal(str)"), str(jogCmd))
+
+        self.testSignal.emit(jogCmd)
+        
+
+
+
     def onRelease(self):
         if self.jogTimer.isActive():
             self.jogTimer.stop()
@@ -180,6 +201,22 @@ class jogWidget(QGridLayout):
             self.jogCancelSocket.send('&JOGCANCEL')
             _ = self.jogCancelSocket.recv()
             self.setJogButtonState(True)
+
+
+    
+
+    def setButtonStates(self,state):
+
+        self.pXJogButton.setEnabled(state)
+        self.nXJogButton.setEnabled(state)
+
+        self.pYJogButton.setEnabled(state)
+        self.nYJogButton.setEnabled(state)
+
+        self.pZJogButton.setEnabled(state)
+        self.nZJogButton.setEnabled(state)
+
+        self.buttonStates = state
 
 
 

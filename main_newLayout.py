@@ -19,7 +19,7 @@ from widgets.cmdButtonWidget import cmdButtonWidget
 from widgets.cmdFeedWidget import cmdFeedWidget
 from widgets.cmdRapidWidget import cmdRapidWidget
 from widgets.settingsWidget import *
-
+from widgets.streamGcodeWidget import streamGcodeWidget
 class MainWindow(QWidget):
     """ Our Main Window class
     """
@@ -62,6 +62,10 @@ class MainWindow(QWidget):
         
         self.settingsWidget = settingsWidget()
 
+        self.dynamicDisplayWidget = QTextEdit()
+
+        self.streamWidget = streamGcodeWidget()
+
 
         self.manualControlLayout = QGridLayout()
         self.manualControlLayout.addLayout(self.jogWidget,0,0,2,2)
@@ -87,6 +91,8 @@ class MainWindow(QWidget):
 
         self.tab.setStyleSheet("QTabBar::tab { height: 25px; width: 150px}")
 
+        self.tab.setEnabled(False)
+
         gridLayout.addLayout(self.SMW,0,0,1,2)
 
         gridLayout.addLayout(self.dro,1,0)
@@ -96,10 +102,14 @@ class MainWindow(QWidget):
         gridLayout.addWidget(self.tab,5,0,1,6)
         gridLayout.addLayout(self.settingsWidget,0,2,4,3)
 
+        gridLayout.addLayout(self.streamWidget,0,2,2,1)
+
         self.setLayout(gridLayout)
 
 
-        
+
+    def connectWidgets(self):
+        self.jogWidget.testSignal.connect(self.serMon.testingSIGNALS)
 
     def setTimers(self):
         self.checkConnectionTimer = QTimer()
@@ -114,7 +124,11 @@ class MainWindow(QWidget):
         # print('checking if connected...')
         if not self.SMW.ser == None:
             if self.SMW.ser.is_open:
-                # print ('Is Connected')
+                
+                if not self.jogWidget.buttonStates:
+                    self.jogWidget.setButtonStates(True)
+                    self.tab.setEnabled(True)
+
                 if not self.dro.droTimer.isActive():
                     self.dro.startDro()
             else:
@@ -126,7 +140,7 @@ class MainWindow(QWidget):
 if __name__ == '__main__':
     # Exception Handling
     try:
-        # QApplication.setStyle('plastique')
+        QApplication.setStyle('plastique')
         myApp = QApplication(sys.argv)
         mainWindow = MainWindow()
 

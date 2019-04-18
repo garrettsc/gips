@@ -1,4 +1,4 @@
-from PySide.QtGui import QPushButton, QWidget, QApplication, QGridLayout, QSpacerItem, QFrame, QLabel, QGroupBox, QRadioButton, QVBoxLayout, QFont
+from PySide.QtGui import QPushButton, QWidget, QApplication, QGridLayout, QSpacerItem, QFrame, QLabel, QGroupBox, QRadioButton, QVBoxLayout, QFont,QSizePolicy
 from PySide.QtCore import QTimer
 
 import sys
@@ -31,6 +31,10 @@ class cmdFeedWidget(QGridLayout):
 
 
         self.feedHoldButton = QPushButton('Feed Hold')
+
+        self.feedHoldButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+
+
         
         self.feedDownOnePercentButton = QPushButton('-1%')
         self.feedDownTenPercentButton = QPushButton('-10%')
@@ -39,26 +43,14 @@ class cmdFeedWidget(QGridLayout):
         self.feedUpOnePercentButton = QPushButton('+1%')
 
         
-# hexList = {'&JOGCANCEL':0x85,
-#            '&FO':0x91,
-#            '&SD':0x84,              #Safety Door
-#            '&F100':0x90,            #Feed 100%
-#            '&FP10':0x91,            #Increase Feed 10%
-#            '&FM10':0x92,            #Decrease Feed 10%
-#            '&FP01':0x93,            #Increase Feed 1%
-#            '&FM01':0x94,            #Decrease Feed 1%
-#            '&R100':0x95,            #Rapid 100%
-#            '&R50' :0x96,            #Rapid 50%
-#            '&R25' :0x97,            #Rapid 25%
-#            '&S100':0x99,            #Spindle 100%
-#            '&SP10':0x9A,            #Increase Spindle 10%
-#            '&SM10':0x9B,            #Decrease Spindle 10%
-#            '&SP01':0x9C,            #Increase Spindle 1%
-#            '&SM01':0x9D,            #Decrease Spindle 1%
-#            '&S00' :0x9E,            #Toggle Spindle Stop
-#            '&TFC' :0xA0,            #Toggle Flood Coolant
-#            '&TMC' :0xA1}            #Toggle Mist Coolant  
+        self.feedDownOnePercentButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.feedDownTenPercentButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.feedOneHundredPercentButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.feedUpTenPercentButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.feedUpOnePercentButton.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
+
+        
         #Connect buttons
         self.feedHoldButton.clicked.connect(self.feedHold)
         self.feedDownOnePercentButton.clicked.connect(self.feedDecreaseOne)

@@ -62,6 +62,8 @@ class serialMonitorWidget(QGridLayout):
 
             self.serialMonitor.append(fullReplyString)
 
+    def testingSIGNALS(self,value):
+        self.serialMonitor.append(str(value))
 
     def setupSerialMonitorWidgets(self):
 
