@@ -102,7 +102,7 @@ class MainWindow(QWidget):
         gridLayout.addWidget(self.tab,5,0,1,6)
         gridLayout.addLayout(self.settingsWidget,0,2,4,3)
 
-        gridLayout.addLayout(self.streamWidget,0,2,2,1)
+        gridLayout.addLayout(self.streamWidget,0,2,3,1)
 
         self.setLayout(gridLayout)
 

@@ -19,7 +19,12 @@ class streamGcodeWidget(QGridLayout):
         """
 
         super(streamGcodeWidget, self).__init__()
-
+                
+        self.currentStatusDict = {'Status':None,
+                                  'WPos:' :None,
+                                  'Bf'    :None,
+                                  'FS'    :None,
+                                  'MPos'  :None}
         
         context = zmq.Context()
         port = 5001
@@ -37,7 +42,7 @@ class streamGcodeWidget(QGridLayout):
         self.nextLineButton = QPushButton('Next Line')
         self.nextLineButton.setEnabled(False)
         self.loadFromFileButton.clicked.connect(self.loadFromFile)
-        self.nextLineButton.clicked.connect(self.next)
+        self.nextLineButton.clicked.connect(self.onPress)
         self.gcodeStreamingBox = QTextEdit()
         self.gcodeStreamingBox.setReadOnly(True)
 
@@ -45,8 +50,7 @@ class streamGcodeWidget(QGridLayout):
         self.tableView.setShowGrid(False)
 
         
-
-        self.addWidget(self.tableView,0,0)
+        self.addWidget(self.tableView,0,0,2,1)
         self.addWidget(self.loadFromFileButton,0,1)
         self.addWidget(self.nextLineButton,1,1)
     
@@ -64,21 +68,73 @@ class streamGcodeWidget(QGridLayout):
         header.setResizeMode(2, QHeaderView.ResizeToContents)
 
 
+    def onPress(self):
+        self.checkConnectionTimer = QTimer()
+        self.checkConnectionTimer.setInterval(10)
+        self.checkConnectionTimer.timeout.connect(self.sendLine)
+        self.checkConnectionTimer.start()
 
-    def next(self):
-        print 'here'
-        self.tableModel.mylist[self.idx][1] = 'ok'
-        self.tableModel.mylist[self.idx+1][1] = 'Staged'
-        self.idx+=1
-        
-        self.tableModel.dataChanged.emit(self.idx,1)
-        
-        try:
-            self.tableView.selectRow(self.idx+5)
-        except:
+    def sendLine(self):
+        self.requestStatusService()
+        print self.currentStatusDict['Bf']
+        if not int(self.currentStatusDict['Bf'][0]) < 10:
+            cmdToSend = self.tableModel.mylist[self.idx][0]
+            self.cmdSocket.send(cmdToSend)
+            reply = self.cmdSocket.recv()
+            self.tableModel.mylist[self.idx][1] = 'ok'
+            self.tableModel.mylist[self.idx+1][1] = 'Staged'
+            self.idx+=1
+            
+            self.tableModel.dataChanged.emit(self.idx,1)
+            
+            try:
+                self.tableView.selectRow(self.idx+5)
+            except:
+                pass
+            self.tableView.selectRow(self.idx)
+        else:
             pass
-        self.tableView.selectRow(self.idx)
 
+
+    def requestStatusService(self):
+        """
+        When called send a '?' status update query across the cmd socket and wait for a response.
+        Parse out the status and the machine position from the status. Method needs cleaned up significantly
+        """
+
+        try:
+            self.cmdSocket.send('?')
+            response = self.cmdSocket.recv()
+
+        except:
+            print ('exception')
+            return
+        resp = json.loads(response)
+
+        try:
+            messageEncoded = resp[1].encode('utf-8').strip()
+
+            messageSplit = messageEncoded.replace('<','').replace('>','').split('|')
+
+            status = messageSplit[0]
+            self.currentStatusDict['Status'] = status
+            for message in messageSplit[1:]:
+                messageName, messageContents = message.split(':')
+                self.currentStatusDict[messageName] = messageContents.split(',')
+
+
+            #Update the 'Status' label widget
+            # pLabel->setStyleSheet("QLabel { background-color : red; color : blue; }");
+            # self.updateStatusWidget(self.currentStatusDict['Status'])
+            # self.statusWidget.setText(self.currentStatusDict['Status'])
+
+            # #Update the Digital Read Out widget
+            # self.droTextWidget.setText(self.droFormat.format(float(self.currentStatusDict['WPos'][0]),
+            #                                                  float(self.currentStatusDict['WPos'][1]),
+            #                                                  float(self.currentStatusDict['WPos'][2])))
+
+        except IndexError as e:
+            pass
     
 
 
@@ -93,6 +149,9 @@ class streamGcodeWidget(QGridLayout):
         
         self.nextLineButton.setEnabled(True)
         self.buildTable()
+
+
+        
         
         
         

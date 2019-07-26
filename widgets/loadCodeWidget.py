@@ -30,6 +30,15 @@ class loadCode(QGridLayout):
         self.addGroupBoxes()
 
 
+    def setupWidgets(self):
+        pass
+
+        #Recently opened file list
+        #Load recently opened file
+
+        #Load file
+        
+
   
     
     def addGroupBoxes(self):
